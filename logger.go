@@ -91,7 +91,7 @@ func (l *Logger) E(errors...interface{})	{
 
 //E ...
 func E(errors...interface{})	{
-	DefaultLogger().W(errors...)
+	DefaultLogger().E(errors...)
 }
 
 //D ...
@@ -108,7 +108,7 @@ func (l *Logger) D(debugs...interface{})	{
 
 //D ...
 func D(debugs...interface{})	{
-	DefaultLogger().W(debugs...)
+	DefaultLogger().D(debugs...)
 }
 
 //I ...
@@ -125,7 +125,7 @@ func (l *Logger) I(infos...interface{})	{
 
 //I ...
 func I(infos...interface{})	{
-	DefaultLogger().W(infos...)
+	DefaultLogger().I(infos...)
 }
 
 //F ...
@@ -143,7 +143,7 @@ func (l *Logger) F(fatal...interface{})	{
 
 //F ...
 func F(fatals...interface{})	{
-	DefaultLogger().W(fatals...)
+	DefaultLogger().F(fatals...)
 }
 
 func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool, obj...interface{})	{
