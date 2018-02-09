@@ -17,7 +17,7 @@ import (
 
 var (
     defaultPath = ``
-    logger      *Logger
+	logger      *Logger
 )
 
 //Logger ...
@@ -147,7 +147,7 @@ func F(fatals...interface{})	{
 }
 
 func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool, obj...interface{})	{
-    _, file, line, _ := runtime.Caller(2)
+    _, file, line, _ := runtime.Caller(3)
 
     if l.consoleLogger == nil   {
         l.consoleLogger = log.New(os.Stdout, ``, 0)
