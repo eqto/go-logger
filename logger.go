@@ -16,7 +16,7 @@ import (
  */
 
 var (
-    defaultPath = ``
+    defaultPath = `log/`
 	logger      *Logger
 )
 
@@ -147,8 +147,8 @@ func F(fatals...interface{})	{
 }
 
 func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool, obj...interface{})	{
+	//TODO kalo mac caller 3
     _, file, line, _ := runtime.Caller(3)
-
     if l.consoleLogger == nil   {
         l.consoleLogger = log.New(os.Stdout, ``, 0)
         l.runLogger = l.createFileLogger(`run.log`)
