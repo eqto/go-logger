@@ -62,7 +62,7 @@ func (l *Logger) createFileLogger(name string) *log.Logger  {
 
 //W ...
 func (l *Logger) W(warnings...interface{})	{
-    if l.warningStyle == nil  {
+    if l.warningLogger == nil  {
         style := styling{
             prepend: `[WARN ]`, color: fgRed,
         }
@@ -79,7 +79,7 @@ func W(warnings...interface{})	{
 
 //E ...
 func (l *Logger) E(errors...interface{})	{
-    if l.errorStyle == nil  {
+    if l.errorLogger == nil  {
         style := styling{
             prepend: `[ERROR]`, color: fgRed,
         }
@@ -96,7 +96,7 @@ func E(errors...interface{})	{
 
 //D ...
 func (l *Logger) D(debugs...interface{})	{
-    if l.debugStyle == nil  {
+    if l.debugLogger == nil  {
         style := styling{
             prepend: `[DEBUG]`, color: fgYellow,
         }
@@ -113,13 +113,13 @@ func D(debugs...interface{})	{
 
 //I ...
 func (l *Logger) I(infos...interface{})	{
-    if l.infoStyle == nil  {
+    if l.infoLogger == nil  {
         style := styling{
             prepend: `[INFO ]`, color: fgBlue,
         }
         l.infoStyle = &style
         l.infoLogger = l.createFileLogger(`info.log`)
-    }
+	}
     l.printLog(l.infoLogger, l.infoStyle, false, infos...)
 }
 
@@ -130,7 +130,7 @@ func I(infos...interface{})	{
 
 //F ...
 func (l *Logger) F(fatal...interface{})	{
-    if l.fatalStyle == nil  {
+    if l.fatalLogger == nil  {
         style := styling{
             prepend: `[FATAL]`, color: bgRed + fgWhite,
         }
@@ -163,7 +163,7 @@ func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool
     console := append([]interface{}{style.color + style.prepend + fgBlack + date + fgCyan + file + fgBlack}, obj...)
     l.consoleLogger.Println(console...)
     console = append([]interface{}{style.prepend + date + file}, obj...)
-    l.runLogger.Println(console...)
+	l.runLogger.Println(console...)
     fileLogger.Println(console...)
 
     if withStack    {
