@@ -22,10 +22,12 @@ var (
 
 //Logger ...
 type Logger struct {
-	consoleLogger, errorLogger, warningLogger, debugLogger, infoLogger, fatalLogger, runLogger *log.Logger
+	consoleLogger, errorLogger, warningLogger, debugLogger, infoLogger, fatalLogger *log.Logger
 	generalWriter	io.Writer
     errorStyle, warningStyle, debugStyle, infoStyle, fatalStyle *styling
-    Path            string
+
+	Path            	string
+	IncludeFilename		bool
 }
 
 type styling struct {
@@ -41,7 +43,7 @@ func SetDefaultPath(path string)	{
 //DefaultLogger ...
 func DefaultLogger() *Logger {
     if logger == nil    {
-        l := Logger{Path: defaultPath}
+        l := Logger{Path: defaultPath, IncludeFilename: true}
         logger = &l
     }
     return logger
@@ -147,23 +149,25 @@ func F(fatals...interface{})	{
 }
 
 func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool, obj...interface{})	{
-	//TODO kalo mac caller 3
-    _, file, line, _ := runtime.Caller(3)
     if l.consoleLogger == nil   {
         l.consoleLogger = log.New(os.Stdout, ``, 0)
-        l.runLogger = l.createFileLogger(`run.log`)
     }
 
-    _, dir := path.Split(path.Dir(file))
-    _, file = path.Split(file)
-
     date := time.Now().Format(` 2006-01-02 15:04:05 `)
-    file = fmt.Sprintf(`(%s/%s:%d)`, dir, file, line)
 
-    console := append([]interface{}{style.color + style.prepend + fgBlack + date + fgCyan + file + fgBlack}, obj...)
+	file := ``
+	if l.IncludeFilename	{
+		_, file, line, _ := runtime.Caller(3)
+		_, dir := path.Split(path.Dir(file))
+		_, file = path.Split(file)
+		file = fmt.Sprintf(`(%s/%s:%d)`, dir, file, line)
+	} else {
+		file = `:`
+	}
+
+	console := append([]interface{}{style.color + style.prepend + fgBlack + date + fgCyan + file + fgBlack}, obj...)
     l.consoleLogger.Println(console...)
     console = append([]interface{}{style.prepend + date + file}, obj...)
-	l.runLogger.Println(console...)
     fileLogger.Println(console...)
 
     if withStack    {
@@ -176,10 +180,10 @@ func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool
                 name := f.Name()
                 if !strings.HasPrefix(name, `runtime.`) && !strings.HasPrefix(name, `reflect.Value.`)  {
                     _, dir := path.Split(path.Dir(file))
-                    _, file = path.Split(file)
-                    formatted := fmt.Sprintf(`(%s:%d) %s`, dir + `/` + file, line, f.Name())
+					_, file = path.Split(file)
+					
+					formatted := fmt.Sprintf(`(%s:%d) %s`, dir + `/` + file, line, f.Name())
                     l.consoleLogger.Println(formatted)
-                    l.runLogger.Println(formatted)
                     fileLogger.Println(formatted)
                 }
             }
