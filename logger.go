@@ -138,7 +138,8 @@ func (l *Logger) F(fatal...interface{})	{
         }
         l.fatalStyle = &style
         l.fatalLogger = l.createFileLogger(`fatal.log`)
-    }
+	}
+	fatal = append(fatal, bgWhite)
     l.printLog(l.fatalLogger, l.fatalStyle, true, fatal...)
 	log.Fatalln()
 }
@@ -155,14 +156,12 @@ func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool
 
     date := time.Now().Format(` 2006-01-02 15:04:05 `)
 
-	file := ``
+	file := fgBlack + `:`
 	if l.IncludeFilename	{
-		_, file, line, _ := runtime.Caller(3)
-		_, dir := path.Split(path.Dir(file))
-		_, file = path.Split(file)
-		file = fmt.Sprintf(`(%s/%s:%d)`, dir, file, line)
-	} else {
-		file = `:`
+		_, f, line, _ := runtime.Caller(3)
+		_, dir := path.Split(path.Dir(f))
+		_, f = path.Split(f)
+		file = fmt.Sprintf(`(%s/%s:%d)`, dir, f, line)
 	}
 
 	console := append([]interface{}{style.color + style.prepend + fgBlack + date + fgCyan + file + fgBlack}, obj...)
