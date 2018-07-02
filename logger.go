@@ -20,14 +20,29 @@ var (
 	logger      *Logger
 )
 
+const (
+	//DEBUG ...
+	DEBUG = iota
+	//WARNING ...
+	WARNING
+	//INFO ...
+	INFO
+	//ERROR ...
+	ERROR
+	//FATAL ...
+	FATAL
+)
+
 //Logger ...
 type Logger struct {
-	consoleLogger, errorLogger, warningLogger, debugLogger, infoLogger, fatalLogger *log.Logger
+	consoleLogger	*log.Logger
+	fileLogger		*log.Logger
 	generalWriter	io.Writer
     errorStyle, warningStyle, debugStyle, infoStyle, fatalStyle *styling
 
 	Path            	string
 	IncludeFilename		bool
+	Level				int
 }
 
 type styling struct {
@@ -37,13 +52,18 @@ type styling struct {
 
 //SetDefaultPath ...
 func SetDefaultPath(path string)	{
-	defaultPath = path
+	DefaultLogger().Path = path
+}
+
+//SetLevel ...
+func SetLevel(level int)	{
+	DefaultLogger().Level = level
 }
 
 //DefaultLogger ...
 func DefaultLogger() *Logger {
     if logger == nil    {
-        l := Logger{Path: defaultPath, IncludeFilename: true}
+        l := Logger{Path: defaultPath, IncludeFilename: true, Level: DEBUG}
         logger = &l
     }
     return logger
@@ -52,7 +72,7 @@ func DefaultLogger() *Logger {
 func (l *Logger) createFileLogger(name string) *log.Logger  {
     if l.Path == ``  {
         l.Path = defaultPath
-    }
+	}
     os.MkdirAll(l.Path, 0755)
     f, e := os.OpenFile(l.Path + name, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0755)
     if e != nil	{
@@ -64,14 +84,10 @@ func (l *Logger) createFileLogger(name string) *log.Logger  {
 
 //W ...
 func (l *Logger) W(warnings...interface{})	{
-    if l.warningLogger == nil  {
-        style := styling{
-            prepend: `[WARN ]`, color: fgRed,
-        }
-        l.warningStyle = &style
-        l.warningLogger = l.createFileLogger(`warning.log`)
-    }
-    l.printLog(l.warningLogger, l.warningStyle, false, warnings...)
+	l.initLogger()
+	if l.Level <= WARNING	{
+		l.printLog(l.warningStyle, false, warnings...)
+	}
 }
 
 //W ...
@@ -81,14 +97,10 @@ func W(warnings...interface{})	{
 
 //E ...
 func (l *Logger) E(errors...interface{})	{
-    if l.errorLogger == nil  {
-        style := styling{
-            prepend: `[ERROR]`, color: fgRed,
-        }
-        l.errorStyle = &style
-        l.errorLogger = l.createFileLogger(`error.log`)
-    }
-    l.printLog(l.errorLogger, l.errorStyle, true, errors...)
+	l.initLogger()
+	if l.Level <= ERROR	{
+		l.printLog(l.errorStyle, true, errors...)
+	}
 }
 
 //E ...
@@ -98,14 +110,10 @@ func E(errors...interface{})	{
 
 //D ...
 func (l *Logger) D(debugs...interface{})	{
-    if l.debugLogger == nil  {
-        style := styling{
-            prepend: `[DEBUG]`, color: fgYellow,
-        }
-        l.debugStyle = &style
-        l.debugLogger = l.createFileLogger(`debug.log`)
-    }
-    l.printLog(l.debugLogger, l.debugStyle, false, debugs...)
+	l.initLogger()
+	if l.Level <= DEBUG	{
+		l.printLog(l.debugStyle, false, debugs...)
+	}
 }
 
 //D ...
@@ -115,14 +123,10 @@ func D(debugs...interface{})	{
 
 //I ...
 func (l *Logger) I(infos...interface{})	{
-    if l.infoLogger == nil  {
-        style := styling{
-            prepend: `[INFO ]`, color: fgBlue,
-        }
-        l.infoStyle = &style
-        l.infoLogger = l.createFileLogger(`info.log`)
+	l.initLogger()
+	if l.Level <= INFO	{
+		l.printLog(l.infoStyle, false, infos...)
 	}
-    l.printLog(l.infoLogger, l.infoStyle, false, infos...)
 }
 
 //I ...
@@ -132,16 +136,13 @@ func I(infos...interface{})	{
 
 //F ...
 func (l *Logger) F(fatal...interface{})	{
-    if l.fatalLogger == nil  {
-        style := styling{
-            prepend: `[FATAL]`, color: bgRed + fgWhite,
-        }
-        l.fatalStyle = &style
-        l.fatalLogger = l.createFileLogger(`fatal.log`)
+	l.initLogger()
+
+	if l.Level <= FATAL	{
+		fatal = append(fatal, bgWhite)
+		l.printLog(l.fatalStyle, true, fatal...)
+		log.Fatalln()
 	}
-	fatal = append(fatal, bgWhite)
-    l.printLog(l.fatalLogger, l.fatalStyle, true, fatal...)
-	log.Fatalln()
 }
 
 //F ...
@@ -149,7 +150,18 @@ func F(fatals...interface{})	{
 	DefaultLogger().F(fatals...)
 }
 
-func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool, obj...interface{})	{
+func (l *Logger) initLogger()	{
+	if l.fileLogger == nil	{
+        l.fatalStyle = &styling{ prepend: `[FATAL]`, color: bgRed + fgWhite }
+        l.errorStyle = &styling{ prepend: `[ERROR]`, color: fgRed }
+		l.infoStyle = &styling{ prepend: `[INFO ]`, color: fgBlue }
+        l.warningStyle = &styling{ prepend: `[WARN ]`, color: fgRed }
+		l.debugStyle = &styling{ prepend: `[DEBUG]`, color: fgYellow }
+		l.fileLogger = l.createFileLogger(`application.log`)
+	}
+}
+
+func (l *Logger) printLog(style *styling, withStack bool, obj...interface{})	{
     if l.consoleLogger == nil   {
         l.consoleLogger = log.New(os.Stdout, ``, 0)
     }
@@ -167,7 +179,7 @@ func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool
 	console := append([]interface{}{style.color + style.prepend + fgBlack + date + fgCyan + file + fgBlack}, obj...)
     l.consoleLogger.Println(console...)
     console = append([]interface{}{style.prepend + date + file}, obj...)
-    fileLogger.Println(console...)
+    l.fileLogger.Println(console...)
 
     if withStack    {
         pc := make([]uintptr, 10)
@@ -183,7 +195,7 @@ func (l *Logger) printLog(fileLogger *log.Logger, style *styling, withStack bool
 					
 					formatted := fmt.Sprintf(`(%s:%d) %s`, dir + `/` + file, line, f.Name())
                     l.consoleLogger.Println(formatted)
-                    fileLogger.Println(formatted)
+                    l.fileLogger.Println(formatted)
                 }
             }
 
