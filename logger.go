@@ -74,8 +74,10 @@ func (l *Logger) createFileLogger(name string) *log.Logger {
 	if l.File == `` {
 		l.File = defaultFile
 	}
+	if index := strings.LastIndex(l.File, `/`); index >= 0 {
+		os.MkdirAll(l.File[0:index], 0755)
+	}
 
-	os.MkdirAll(l.File[0:strings.LastIndex(l.File, `/`)], 0755)
 	f, e := os.OpenFile(l.File, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
 	if e != nil {
 		log.Fatal(e)
