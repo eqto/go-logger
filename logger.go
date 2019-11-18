@@ -3,7 +3,6 @@ package log
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path"
 	"runtime"
@@ -15,175 +14,125 @@ import (
  * Created by tuxer on 8/30/17.
  */
 
-var (
-	defaultFile = `log/application.log`
-	logger      *Logger
-)
-
-const (
-	//DEBUG ...
-	DEBUG = iota
-	//WARNING ...
-	WARNING
-	//INFO ...
-	INFO
-	//ERROR ...
-	ERROR
-	//FATAL ...
-	FATAL
-)
-
 //Logger ...
 type Logger struct {
-	consoleLogger *log.Logger
-	fileLogger    *log.Logger
-	generalWriter io.Writer
+	Level int
 
-	errorStyle, warningStyle, debugStyle, infoStyle, fatalStyle *styling
+	File string
+	f    *os.File
 
-	File            string
-	IncludeFilename bool
-	Level           int
-}
-
-type styling struct {
-	prepend string
-	color   string
-}
-
-//SetDefaultFile ...
-func SetDefaultFile(file string) {
-	DefaultLogger().File = file
-}
-
-//SetLevel ...
-func SetLevel(level int) {
-	DefaultLogger().Level = level
-}
-
-//DefaultLogger ...
-func DefaultLogger() *Logger {
-	if logger == nil {
-		l := Logger{File: defaultFile, IncludeFilename: true, Level: DEBUG}
-		logger = &l
-	}
-	return logger
-}
-
-func (l *Logger) createFileLogger(name string) *log.Logger {
-	if l.File == `` {
-		l.File = defaultFile
+	prefix struct {
+		value                   *string
+		level, date, time, file string
 	}
 
-	os.MkdirAll(l.File[0:strings.LastIndex(l.File, `/`)], 0755)
-	f, e := os.OpenFile(l.File, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
-	if e != nil {
-		log.Fatal(e)
-		return nil
-	}
-	return log.New(f, ``, 0)
+	out io.Writer
 }
 
-//W ...
-func (l *Logger) W(warnings ...interface{}) {
-	l.initLogger()
-	if l.Level <= WARNING {
-		l.printLog(l.warningStyle, false, warnings...)
+//Print ...
+func (l *Logger) Print(v ...interface{}) {
+	l.print(DEBUG, false, ``, v...)
+}
+
+//Printf ...
+func (l *Logger) Printf(format string, v ...interface{}) {
+	l.print(DEBUG, false, format, v...)
+}
+
+//Println ...
+func (l *Logger) Println(v ...interface{}) {
+	l.print(DEBUG, true, ``, v...)
+}
+
+func (l *Logger) check() {
+	if l.prefix.value == nil {
+		l.SetFormat(defaultPrefix)
+	}
+	if l.File != `` && l.f == nil {
+		os.MkdirAll(l.File[0:strings.LastIndex(l.File, `/`)], 0755)
+		f, e := os.OpenFile(l.File, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
+		if e != nil {
+			W(e)
+		} else {
+			l.f = f
+		}
 	}
 }
 
-//W ...
-func W(warnings ...interface{}) {
-	DefaultLogger().W(warnings...)
-}
-
-//E ...
-func (l *Logger) E(errors ...interface{}) {
-	l.initLogger()
-	if l.Level <= ERROR {
-		l.printLog(l.errorStyle, true, errors...)
-	}
-}
-
-//E ...
-func E(errors ...interface{}) {
-	DefaultLogger().E(errors...)
+//SetFormat ...
+func (l *Logger) SetFormat(format string) {
+	l.prefix.value = &format
+	l.prefix.level = regexLevel.FindString(format)
+	l.prefix.date = regexDate.FindString(format)
+	l.prefix.time = regexTime.FindString(format)
+	l.prefix.file = regexFile.FindString(format)
 }
 
 //D ...
-func (l *Logger) D(debugs ...interface{}) {
-	l.initLogger()
+func (l *Logger) D(d ...interface{}) {
 	if l.Level <= DEBUG {
-		l.printLog(l.debugStyle, false, debugs...)
+		l.print(DEBUG, true, ``, d...)
 	}
 }
 
-//D ...
-func D(debugs ...interface{}) {
-	DefaultLogger().D(debugs...)
-}
-
 //I ...
-func (l *Logger) I(infos ...interface{}) {
-	l.initLogger()
+func (l *Logger) I(i ...interface{}) {
 	if l.Level <= INFO {
-		l.printLog(l.infoStyle, false, infos...)
+		l.print(INFO, true, ``, i...)
 	}
 }
 
-//I ...
-func I(infos ...interface{}) {
-	DefaultLogger().I(infos...)
-}
-
-//F ...
-func (l *Logger) F(fatal ...interface{}) {
-	l.initLogger()
-
-	if l.Level <= FATAL {
-		fatal = append(fatal, bgWhite)
-		l.printLog(l.fatalStyle, true, fatal...)
-		log.Fatalln()
+//W ...
+func (l *Logger) W(w ...interface{}) {
+	if l.Level <= WARNING {
+		l.print(WARNING, true, ``, w...)
 	}
 }
 
-//F ...
-func F(fatals ...interface{}) {
-	DefaultLogger().F(fatals...)
-}
-
-func (l *Logger) initLogger() {
-	if l.fileLogger == nil {
-		l.fatalStyle = &styling{prepend: `[FATAL]`, color: bgRed + fgWhite}
-		l.errorStyle = &styling{prepend: `[ERROR]`, color: fgRed}
-		l.infoStyle = &styling{prepend: `[INFO ]`, color: fgBlue}
-		l.warningStyle = &styling{prepend: `[WARN ]`, color: fgRed}
-		l.debugStyle = &styling{prepend: `[DEBUG]`, color: fgYellow}
-		l.fileLogger = l.createFileLogger(`application.log`)
+//E ...
+func (l *Logger) E(e ...interface{}) {
+	if l.Level <= ERROR {
+		l.print(ERROR, true, ``, e...)
 	}
 }
 
-func (l *Logger) printLog(style *styling, withStack bool, obj ...interface{}) {
-	if l.consoleLogger == nil {
-		l.consoleLogger = log.New(os.Stdout, ``, 0)
+// F equivalent to Print() followed by a call to os.Exit(1).
+func (l *Logger) F(f ...interface{}) {
+	l.print(FATAL, false, ``, f...)
+	os.Exit(1)
+}
+
+func (l *Logger) print(level int, newLine bool, format string, v ...interface{}) {
+	l.check()
+	buffer := *l.prefix.value
+	now := time.Now()
+
+	if l.prefix.level != `` {
+		buffer = strings.Replace(
+			buffer, l.prefix.level,
+			levelColor[level]+strings.Replace(l.prefix.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
 	}
-
-	date := time.Now().Format(` 2006-01-02 15:04:05 `)
-
-	file := fgBlack + `:`
-	if l.IncludeFilename {
+	if l.prefix.date != `` {
+		buffer = strings.Replace(
+			buffer, l.prefix.date,
+			bgWhite+fgBlack+strings.Replace(l.prefix.date, `%date%`, now.Format(`2006-01-02`), 1), 1)
+	}
+	if l.prefix.time != `` {
+		buffer = strings.Replace(
+			buffer, l.prefix.time,
+			bgWhite+fgBlack+strings.Replace(l.prefix.time, `%time%`, now.Format(`15:04:05`), 1), 1)
+	}
+	if l.prefix.file != `` {
 		_, f, line, _ := runtime.Caller(3)
 		_, dir := path.Split(path.Dir(f))
 		_, f = path.Split(f)
-		file = fmt.Sprintf(`(%s/%s:%d)`, dir, f, line)
+		buffer = strings.Replace(
+			buffer, l.prefix.file,
+			bgWhite+fgCyan+strings.Replace(l.prefix.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, f, line), 1)+bgWhite+fgBlack, 1)
 	}
-
-	console := append([]interface{}{style.color + style.prepend + fgBlack + date + fgCyan + file + fgBlack}, obj...)
-	l.consoleLogger.Println(console...)
-	console = append([]interface{}{style.prepend + date + file}, obj...)
-	l.fileLogger.Println(console...)
-
-	if withStack {
+	buffer = buffer + fmt.Sprint(v...)
+	if level >= ERROR {
+		buffer = buffer + "\n"
 		pc := make([]uintptr, 10)
 		runtime.Callers(5, pc)
 		for _, p := range pc {
@@ -194,13 +143,96 @@ func (l *Logger) printLog(style *styling, withStack bool, obj ...interface{}) {
 				if !strings.HasPrefix(name, `runtime.`) && !strings.HasPrefix(name, `reflect.Value.`) {
 					_, dir := path.Split(path.Dir(file))
 					_, file = path.Split(file)
-
-					formatted := fmt.Sprintf(`(%s:%d) %s`, dir+`/`+file, line, f.Name())
-					l.consoleLogger.Println(formatted)
-					l.fileLogger.Println(formatted)
+					buffer = buffer + `  ` + fmt.Sprintf(`(%s:%d) %s`, dir+`/`+file, line, f.Name()) + "\n"
 				}
 			}
 
 		}
 	}
+	if l.out == nil {
+		l.out = os.Stdout
+	}
+	l.out.Write([]byte(buffer))
+	if newLine && level < ERROR {
+		l.out.Write([]byte("\n"))
+	}
+	if l.f != nil {
+		l.f.WriteString(regexStrip.ReplaceAllString(buffer, ``))
+	}
+}
+
+//D ...
+func D(d ...interface{}) {
+	std.D(d...)
+}
+
+//I ...
+func I(i ...interface{}) {
+	std.I(i...)
+}
+
+//W ...
+func W(w ...interface{}) {
+	std.W(w...)
+}
+
+//E ...
+func E(e ...interface{}) {
+	std.E(e...)
+}
+
+// F equivalent to Print() followed by a call to os.Exit(1).
+func F(f ...interface{}) {
+	std.F(f...)
+}
+
+//SetLevel ...
+func SetLevel(level int) {
+	std.Level = level
+}
+
+//SetFile ...
+func SetFile(file string) {
+	std.File = file
+}
+
+// Fatal is equivalent to Print() followed by a call to os.Exit(1).
+// Compatibility for built-in go logging library
+func Fatal(v ...interface{}) {
+	std.Print(v...)
+	os.Exit(1)
+}
+
+// Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
+// Compatibility for built-in go logging library
+func Fatalf(format string, v ...interface{}) {
+	std.Printf(format, v...)
+	os.Exit(1)
+}
+
+// Fatalln is alias for F()
+// Compatibility for built-in go logging library
+func Fatalln(v ...interface{}) {
+	std.F(v...)
+}
+
+// Print calls Output to print to the standard logger.
+// Arguments are handled in the manner of fmt.Print.
+// Compatibility for built-in go logging library
+func Print(v ...interface{}) {
+	std.Print(fmt.Sprint(v...))
+}
+
+// Printf calls Output to print to the standard logger.
+// Arguments are handled in the manner of fmt.Printf.
+// Compatibility for built-in go logging library
+func Printf(format string, v ...interface{}) {
+	std.Printf(fmt.Sprintf(format, v...))
+}
+
+// Println calls Output to print to the standard logger.
+// Arguments are handled in the manner of fmt.Println.
+// Compatibility for built-in go logging library
+func Println(v ...interface{}) {
+	std.Println(fmt.Sprintln(v...))
 }
