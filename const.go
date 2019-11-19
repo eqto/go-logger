@@ -7,7 +7,7 @@
 package log
 
 const (
-	defaultPrefix = `[%level%] %date% %time% (%file%) `
+	defaultPrefix = `[%level%] %date% %time% (%file%): `
 )
 
 const (
