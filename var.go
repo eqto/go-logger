@@ -6,7 +6,9 @@
 
 package log
 
-import "regexp"
+import (
+	"regexp"
+)
 
 var (
 	levelColor = map[int]string{
@@ -24,7 +26,7 @@ var (
 		FATAL:   `FATAL`,
 	}
 
-	std        = &Logger{}
+	std        = New(DefaultFormat, `log/app.log`)
 	regexLevel = regexp.MustCompile(`\S*%level%\S*`)
 	regexDate  = regexp.MustCompile(`%date%`)
 	regexTime  = regexp.MustCompile(`%time%`)

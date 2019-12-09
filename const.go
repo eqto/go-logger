@@ -7,7 +7,8 @@
 package log
 
 const (
-	defaultPrefix = `[%level%] %date% %time% (%file%): `
+	DefaultFormat = `[%level%] %date% %time% (%file%) `
+	DefaultFile   = `log/app.log`
 )
 
 const (
