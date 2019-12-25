@@ -20,7 +20,7 @@ type Logger struct {
 
 	File      string
 	f         *os.File
-	CallDepth int
+	callDepth int
 
 	format struct {
 		value                   *string
@@ -100,6 +100,11 @@ func (l *Logger) F(v ...interface{}) {
 	os.Exit(1)
 }
 
+//SetCallDepth ...
+func (l *Logger) SetCallDepth(depth int) {
+	l.callDepth = depth
+}
+
 func (l *Logger) println(level int, format string, v ...interface{}) {
 	l.print(level, true, format, v...)
 }
@@ -124,7 +129,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 			bgWhite+fgBlack+strings.Replace(l.format.time, `%time%`, now.Format(`15:04:05`), 1), 1)
 	}
 	if l.format.file != `` {
-		_, f, line, _ := runtime.Caller(l.CallDepth + 2)
+		_, f, line, _ := runtime.Caller(l.callDepth + 2)
 		_, dir := path.Split(path.Dir(f))
 		_, f = path.Split(f)
 		buffer = strings.Replace(
@@ -266,7 +271,7 @@ func SetFormat(format string) {
 //New ...
 func New(format string, file string) *Logger {
 	logger := &Logger{
-		CallDepth: 1,
+		callDepth: 1,
 		File:      file,
 	}
 	if file != `` {
