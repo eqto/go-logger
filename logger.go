@@ -282,6 +282,11 @@ func New(format string, file string) *Logger {
 	return logger
 }
 
+//NewDefault ...
+func NewDefault() *Logger {
+	return New(DefaultFormat, `log/application.log`)
+}
+
 //Default ...
 func Default() *Logger {
 	return std

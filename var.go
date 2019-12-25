@@ -26,7 +26,7 @@ var (
 		FATAL:   `FATAL`,
 	}
 
-	std        = New(DefaultFormat, `log/app.log`)
+	std        = NewDefault()
 	regexLevel = regexp.MustCompile(`\S*%level%\S*`)
 	regexDate  = regexp.MustCompile(`%date%`)
 	regexTime  = regexp.MustCompile(`%time%`)
