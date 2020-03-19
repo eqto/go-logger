@@ -12,18 +12,18 @@ import (
 
 var (
 	levelColor = map[int]string{
-		DEBUG:   bgWhite + fgGreen,
-		INFO:    bgWhite + fgBlue,
-		WARNING: bgWhite + fgYellow,
-		ERROR:   bgWhite + fgRed,
-		FATAL:   bgRed + fgWhite,
+		LevelDebug: bgWhite + fgGreen,
+		LevelInfo:  bgWhite + fgBlue,
+		LevelWarn:  bgWhite + fgYellow,
+		LevelError: bgWhite + fgRed,
+		LevelFatal: bgRed + fgWhite,
 	}
 	levelName = map[int]string{
-		DEBUG:   `DEBUG`,
-		INFO:    `INFO `,
-		WARNING: `WARN `,
-		ERROR:   `ERROR`,
-		FATAL:   `FATAL`,
+		LevelDebug: `DEBUG`,
+		LevelInfo:  `INFO `,
+		LevelWarn:  `WARN `,
+		LevelError: `ERROR`,
+		LevelFatal: `FATAL`,
 	}
 
 	std        = NewDefault()

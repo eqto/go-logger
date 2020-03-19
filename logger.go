@@ -14,6 +14,11 @@ import (
  * Created by tuxer on 8/30/17.
  */
 
+type Format struct {
+	value                   string
+	level, date, time, file string
+}
+
 //Logger ...
 type Logger struct {
 	Level int
@@ -22,38 +27,48 @@ type Logger struct {
 	f         *os.File
 	callDepth int
 
-	format struct {
-		value                   *string
-		level, date, time, file string
-	}
-
-	prefix string
-
-	out io.Writer
+	formats map[int]*Format
+	prefix  string
+	out     io.Writer
 }
 
 //Print ...
 func (l *Logger) Print(v ...interface{}) {
-	l.print(DEBUG, false, ``, v...)
+	l.print(LevelDebug, false, ``, v...)
 }
 
 //Printf ...
 func (l *Logger) Printf(format string, v ...interface{}) {
-	l.print(DEBUG, false, format, v...)
+	l.print(LevelDebug, false, format, v...)
 }
 
 //Println ...
 func (l *Logger) Println(v ...interface{}) {
-	l.print(DEBUG, true, ``, v...)
+	l.print(LevelDebug, true, ``, v...)
+}
+
+//Format ...
+func (l *Logger) Format(level int) *Format {
+	if f, ok := l.formats[level]; ok {
+		return f
+	}
+	return l.formats[LevelAll]
+}
+
+//SetLevelFormat ...
+func (l *Logger) SetLevelFormat(level int, format string) {
+	if l.formats == nil {
+		l.formats = make(map[int]*Format)
+	}
+	l.formats[level] = newFormat(level, format)
+	if l.formats[LevelAll] == nil {
+		l.formats[LevelAll] = l.formats[level]
+	}
 }
 
 //SetFormat ...
 func (l *Logger) SetFormat(format string) {
-	l.format.value = &format
-	l.format.level = regexLevel.FindString(format)
-	l.format.date = regexDate.FindString(format)
-	l.format.time = regexTime.FindString(format)
-	l.format.file = regexFile.FindString(format)
+	l.SetLevelFormat(LevelAll, format)
 }
 
 // Prefix returns the output prefix for the logger.
@@ -68,35 +83,35 @@ func (l *Logger) SetPrefix(prefix string) {
 
 //D ...
 func (l *Logger) D(v ...interface{}) {
-	if l.Level <= DEBUG {
-		l.print(DEBUG, true, ``, v...)
+	if l.Level <= LevelDebug {
+		l.print(LevelDebug, true, ``, v...)
 	}
 }
 
 //I ...
 func (l *Logger) I(v ...interface{}) {
-	if l.Level <= INFO {
-		l.print(INFO, true, ``, v...)
+	if l.Level <= LevelInfo {
+		l.print(LevelInfo, true, ``, v...)
 	}
 }
 
 //W ...
 func (l *Logger) W(v ...interface{}) {
-	if l.Level <= WARNING {
-		l.print(WARNING, true, ``, v...)
+	if l.Level <= LevelWarn {
+		l.print(LevelWarn, true, ``, v...)
 	}
 }
 
 //E ...
 func (l *Logger) E(v ...interface{}) {
-	if l.Level <= ERROR {
-		l.print(ERROR, true, ``, v...)
+	if l.Level <= LevelError {
+		l.print(LevelError, true, ``, v...)
 	}
 }
 
 // F equivalent to Print() followed by a call to os.Exit(1).
 func (l *Logger) F(v ...interface{}) {
-	l.print(FATAL, false, ``, v...)
+	l.print(LevelFatal, false, ``, v...)
 	os.Exit(1)
 }
 
@@ -105,36 +120,56 @@ func (l *Logger) SetCallDepth(depth int) {
 	l.callDepth = depth
 }
 
+//SetFile ...
+func (l *Logger) SetFile(file string) {
+	if file != `` {
+		l.File = file
+		os.MkdirAll(file[0:strings.LastIndex(file, `/`)], 0755)
+		f, e := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
+		if e != nil {
+			l.W(e)
+		} else {
+			l.f = f
+		}
+	}
+}
+
 func (l *Logger) println(level int, format string, v ...interface{}) {
 	l.print(level, true, format, v...)
 }
 
 func (l *Logger) print(level int, newline bool, format string, v ...interface{}) {
-	buffer := *l.format.value
+	var f *Format
+	if format, ok := l.formats[level]; ok {
+		f = format
+	} else {
+		f = l.formats[0]
+	}
+	buffer := string(f.value)
 	now := time.Now()
 
-	if l.format.level != `` {
+	if f.level != `` {
 		buffer = strings.Replace(
-			buffer, l.format.level,
-			levelColor[level]+strings.Replace(l.format.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
+			buffer, f.level,
+			levelColor[level]+strings.Replace(f.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
 	}
-	if l.format.date != `` {
+	if f.date != `` {
 		buffer = strings.Replace(
-			buffer, l.format.date,
-			bgWhite+fgBlack+strings.Replace(l.format.date, `%date%`, now.Format(`2006-01-02`), 1), 1)
+			buffer, f.date,
+			bgWhite+fgBlack+strings.Replace(f.date, `%date%`, now.Format(`2006-01-02`), 1), 1)
 	}
-	if l.format.time != `` {
+	if f.time != `` {
 		buffer = strings.Replace(
-			buffer, l.format.time,
-			bgWhite+fgBlack+strings.Replace(l.format.time, `%time%`, now.Format(`15:04:05`), 1), 1)
+			buffer, f.time,
+			bgWhite+fgBlack+strings.Replace(f.time, `%time%`, now.Format(`15:04:05`), 1), 1)
 	}
-	if l.format.file != `` {
-		_, f, line, _ := runtime.Caller(l.callDepth + 2)
-		_, dir := path.Split(path.Dir(f))
-		_, f = path.Split(f)
+	if f.file != `` {
+		_, file, line, _ := runtime.Caller(l.callDepth + 2)
+		_, dir := path.Split(path.Dir(file))
+		_, file = path.Split(file)
 		buffer = strings.Replace(
-			buffer, l.format.file,
-			bgWhite+fgCyan+strings.Replace(l.format.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, f, line), 1)+bgWhite+fgBlack, 1)
+			buffer, f.file,
+			bgWhite+fgCyan+strings.Replace(f.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, file, line), 1)+bgWhite+fgBlack, 1)
 	}
 	if l.prefix != `` {
 		buffer = buffer + l.prefix + ` `
@@ -144,7 +179,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 	} else {
 		buffer = buffer + fmt.Sprint(v...)
 	}
-	if level >= ERROR {
+	if level >= LevelError {
 		if !newline {
 			buffer = buffer + "\n"
 		}
@@ -205,7 +240,7 @@ func SetLevel(level int) {
 
 //SetFile ...
 func SetFile(file string) {
-	std.File = file
+	std.SetFile(file)
 }
 
 // Fatal is equivalent to Print() followed by a call to os.Exit(1).
@@ -261,35 +296,31 @@ func SetPrefix(prefix string) {
 
 //SetFormat ...
 func SetFormat(format string) {
-	std.format.value = &format
-	std.format.level = regexLevel.FindString(format)
-	std.format.date = regexDate.FindString(format)
-	std.format.time = regexTime.FindString(format)
-	std.format.file = regexFile.FindString(format)
+	std.SetFormat(format)
+}
+
+func newFormat(level int, format string) *Format {
+	return &Format{
+		value: format,
+		level: regexLevel.FindString(format),
+		date:  regexDate.FindString(format),
+		time:  regexTime.FindString(format),
+		file:  regexFile.FindString(format),
+	}
+
 }
 
 //New ...
 func New(format string, file string) *Logger {
-	logger := &Logger{
-		callDepth: 1,
-		File:      file,
-	}
-	if file != `` {
-		os.MkdirAll(file[0:strings.LastIndex(file, `/`)], 0755)
-		f, e := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
-		if e != nil {
-			logger.W(e)
-		} else {
-			logger.f = f
-		}
-	}
+	logger := &Logger{callDepth: 1}
+	logger.SetFile(file)
 	logger.SetFormat(format)
 	return logger
 }
 
 //NewDefault ...
 func NewDefault() *Logger {
-	return New(DefaultFormat, `log/application.log`)
+	return New(DefaultFormat, DefaultFile)
 }
 
 //Default ...
