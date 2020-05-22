@@ -124,13 +124,6 @@ func (l *Logger) SetCallDepth(depth int) {
 func (l *Logger) SetFile(file string) {
 	if file != `` {
 		l.File = file
-		os.MkdirAll(file[0:strings.LastIndex(file, `/`)], 0755)
-		f, e := os.OpenFile(file, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
-		if e != nil {
-			l.W(e)
-		} else {
-			l.f = f
-		}
 	}
 }
 
@@ -166,6 +159,10 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 	if f.file != `` {
 		_, file, line, _ := runtime.Caller(l.callDepth + 2)
 		_, dir := path.Split(path.Dir(file))
+		if dir == `runtime` {
+			_, file, line, _ = runtime.Caller(l.callDepth + 1)
+			_, dir = path.Split(path.Dir(file))
+		}
 		_, file = path.Split(file)
 		buffer = strings.Replace(
 			buffer, f.file,
@@ -203,6 +200,15 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		l.out = os.Stdout
 	}
 	l.out.Write([]byte(buffer))
+	if l.f == nil && l.File != `` {
+		os.MkdirAll(l.File[0:strings.LastIndex(l.File, `/`)], 0755)
+		f, e := os.OpenFile(l.File, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
+		if e != nil {
+			l.W(e)
+		} else {
+			l.f = f
+		}
+	}
 	if l.f != nil {
 		l.f.WriteString(regexStrip.ReplaceAllString(buffer, ``))
 	}
@@ -312,15 +318,14 @@ func newFormat(level int, format string) *Format {
 
 //New ...
 func New(format string, file string) *Logger {
-	logger := &Logger{callDepth: 1}
-	logger.SetFile(file)
+	logger := &Logger{callDepth: 1, File: file}
 	logger.SetFormat(format)
 	return logger
 }
 
 //NewDefault ...
 func NewDefault() *Logger {
-	return New(DefaultFormat, DefaultFile)
+	return New(DefaultFormat, ``)
 }
 
 //Default ...
