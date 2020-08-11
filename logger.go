@@ -165,7 +165,9 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		}
 		_, file = path.Split(file)
 		dirs := regexDir.FindStringSubmatch(dir)
-		dir = dirs[1]
+		if len(dirs) > 1 {
+			dir = dirs[1]
+		}
 		buffer = strings.Replace(
 			buffer, f.file,
 			bgWhite+fgCyan+strings.Replace(f.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, file, line), 1)+bgWhite+fgBlack, 1)
