@@ -165,9 +165,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		}
 		_, file = path.Split(file)
 		dirs := regexDir.FindStringSubmatch(dir)
-		if len(dirs) > 1 {
-			dir = dirs[1]
-		}
+		dir = dirs[1]
 		buffer = strings.Replace(
 			buffer, f.file,
 			bgWhite+fgCyan+strings.Replace(f.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, file, line), 1)+bgWhite+fgBlack, 1)
@@ -205,7 +203,9 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 	}
 	l.out.Write([]byte(buffer))
 	if l.f == nil && l.File != `` {
-		os.MkdirAll(l.File[0:strings.LastIndex(l.File, `/`)], 0755)
+		if idx := strings.LastIndex(l.File, `/`); idx >= 0 {
+			os.MkdirAll(l.File[0:strings.LastIndex(l.File, `/`)], 0755)
+		}
 		f, e := os.OpenFile(l.File, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
 		if e != nil {
 			l.W(e)
