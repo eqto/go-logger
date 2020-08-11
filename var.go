@@ -33,4 +33,6 @@ var (
 	regexFile  = regexp.MustCompile(`\S*%file%\S*`)
 
 	regexStrip = regexp.MustCompile(`\033\[[0-9]+;1m`)
+
+	regexDir = regexp.MustCompile(`^(?Uis)(.+)(@.+|)$`)
 )
