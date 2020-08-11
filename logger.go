@@ -199,7 +199,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		}
 	}
 	if l.out == nil {
-		l.out = os.Stdout
+		l.out = os.Stderr
 	}
 	l.out.Write([]byte(buffer))
 	if l.f == nil && l.File != `` {
