@@ -1,9 +1,3 @@
-/**
-* Created by Visual Studio Code.
-* User: tuxer
-* Created At: 2019-11-19 00:09:59
-**/
-
 package log
 
 import (

@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-/**
- * Created by tuxer on 8/30/17.
- */
-
 type Format struct {
 	value                   string
 	level, date, time, file string
