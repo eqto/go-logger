@@ -183,9 +183,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		}
 		frames := Stacktrace()
 		for _, frame := range frames {
-			dir, file := path.Split(frame.File)
-			dir = path.Base(dir)
-			buf.WriteString(fmt.Sprintf("    (%s/%s:%d) %s\n", dir, file, frame.Line, frame.Function))
+			buf.WriteString(`    ` + frame.String() + "\n")
 		}
 	}
 	if l.out == nil {
@@ -210,7 +208,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 }
 
 //Stacktrace ...
-func Stacktrace() []runtime.Frame {
+func Stacktrace() []Frame {
 	pc := make([]uintptr, 10)
 	n := runtime.Callers(5, pc)
 	if n == 0 {
@@ -218,12 +216,12 @@ func Stacktrace() []runtime.Frame {
 	}
 	pc = pc[:n]
 	i := runtime.CallersFrames(pc)
-	frames := []runtime.Frame{}
+	frames := []Frame{}
 	for {
 		frame, more := i.Next()
 		if !strings.HasPrefix(frame.Function, `runtime.`) &&
 			!strings.HasPrefix(frame.Function, `reflect.Value.`) {
-			frames = append(frames, frame)
+			frames = append(frames, newFrame(frame))
 		}
 		if !more {
 			break
