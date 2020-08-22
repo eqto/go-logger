@@ -178,20 +178,11 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		if !newline {
 			buffer = buffer + "\n"
 		}
-		pc := make([]uintptr, 10)
-		runtime.Callers(5, pc)
-		for _, p := range pc {
-			if p > 0 {
-				f := runtime.FuncForPC(p)
-				file, line := f.FileLine(p)
-				name := f.Name()
-				if !strings.HasPrefix(name, `runtime.`) && !strings.HasPrefix(name, `reflect.Value.`) {
-					_, dir := path.Split(path.Dir(file))
-					_, file = path.Split(file)
-					buffer = buffer + `  ` + fmt.Sprintf(`(%s:%d) %s`, dir+`/`+file, line, f.Name()) + "\n"
-				}
-			}
-
+		frames := Stacktrace()
+		for _, frame := range frames {
+			dir, file := path.Split(frame.File)
+			dir = path.Base(dir)
+			buffer = buffer + `  ` + fmt.Sprintf(`(%s/%s:%d) %s`, dir, file, frame.Line, frame.Function) + "\n"
 		}
 	}
 	if l.out == nil {
@@ -212,6 +203,29 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 	if l.f != nil {
 		l.f.WriteString(regexStrip.ReplaceAllString(buffer, ``))
 	}
+}
+
+//Stacktrace ...
+func Stacktrace() []runtime.Frame {
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(2, pc)
+	if n == 0 {
+		return nil
+	}
+	pc = pc[:n]
+	i := runtime.CallersFrames(pc)
+	frames := []runtime.Frame{}
+	for {
+		frame, more := i.Next()
+		if !strings.HasPrefix(frame.Function, `runtime.`) &&
+			!strings.HasPrefix(frame.Function, `reflect.Value.`) {
+			frames = append(frames, frame)
+		}
+		if !more {
+			break
+		}
+	}
+	return frames
 }
 
 //D ...
