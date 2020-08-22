@@ -134,22 +134,22 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 	} else {
 		f = l.formats[0]
 	}
-	buffer := string(f.value)
+	out := string(f.value)
 	now := time.Now()
 
 	if f.level != `` {
-		buffer = strings.Replace(
-			buffer, f.level,
+		out = strings.Replace(
+			out, f.level,
 			levelColor[level]+strings.Replace(f.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
 	}
 	if f.date != `` {
-		buffer = strings.Replace(
-			buffer, f.date,
+		out = strings.Replace(
+			out, f.date,
 			bgWhite+fgBlack+strings.Replace(f.date, `%date%`, now.Format(`2006-01-02`), 1), 1)
 	}
 	if f.time != `` {
-		buffer = strings.Replace(
-			buffer, f.time,
+		out = strings.Replace(
+			out, f.time,
 			bgWhite+fgBlack+strings.Replace(f.time, `%time%`, now.Format(`15:04:05`), 1), 1)
 	}
 	if f.file != `` {
@@ -162,33 +162,37 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		_, file = path.Split(file)
 		dirs := regexDir.FindStringSubmatch(dir)
 		dir = dirs[1]
-		buffer = strings.Replace(
-			buffer, f.file,
+		out = strings.Replace(
+			out, f.file,
 			bgWhite+fgCyan+strings.Replace(f.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, file, line), 1)+bgWhite+fgBlack, 1)
 	}
+	buf := strings.Builder{}
+	buf.WriteString(out)
+
 	if l.prefix != `` {
-		buffer = buffer + l.prefix + ` `
+		buf.WriteString(l.prefix + ` `)
 	}
 	if newline {
-		buffer = buffer + fmt.Sprintln(v...)
+		buf.WriteString(fmt.Sprintln(v...))
 	} else {
-		buffer = buffer + fmt.Sprint(v...)
+		buf.WriteString(fmt.Sprint(v...))
 	}
 	if level >= LevelError {
 		if !newline {
-			buffer = buffer + "\n"
+			buf.WriteString("\n")
 		}
 		frames := Stacktrace()
 		for _, frame := range frames {
 			dir, file := path.Split(frame.File)
 			dir = path.Base(dir)
-			buffer = buffer + `  ` + fmt.Sprintf(`(%s/%s:%d) %s`, dir, file, frame.Line, frame.Function) + "\n"
+			buf.WriteString(fmt.Sprintf("    (%s/%s:%d) %s\n", dir, file, frame.Line, frame.Function))
 		}
 	}
 	if l.out == nil {
 		l.out = os.Stderr
 	}
-	l.out.Write([]byte(buffer))
+	out = buf.String()
+	l.out.Write([]byte(out))
 	if l.f == nil && l.File != `` {
 		if idx := strings.LastIndex(l.File, `/`); idx >= 0 {
 			os.MkdirAll(l.File[0:strings.LastIndex(l.File, `/`)], 0755)
@@ -201,14 +205,14 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		}
 	}
 	if l.f != nil {
-		l.f.WriteString(regexStrip.ReplaceAllString(buffer, ``))
+		l.f.WriteString(regexStrip.ReplaceAllString(out, ``))
 	}
 }
 
 //Stacktrace ...
 func Stacktrace() []runtime.Frame {
 	pc := make([]uintptr, 10)
-	n := runtime.Callers(2, pc)
+	n := runtime.Callers(5, pc)
 	if n == 0 {
 		return nil
 	}
