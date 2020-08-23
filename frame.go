@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"path"
 	"runtime"
+	"strings"
 )
 
 //Frame ...
 type Frame struct {
 	File     string
 	Dir      string
+	Version  string
 	Function string
 	Line     int
 }
@@ -20,11 +22,15 @@ func (f *Frame) String() string {
 
 func newFrame(frame runtime.Frame) Frame {
 	dir, file := path.Split(frame.File)
-	dir = path.Base(dir)
-	return Frame{
+	dirs := strings.SplitN(path.Base(dir), `@`, 2)
+	f := Frame{
 		File:     file,
-		Dir:      dir,
+		Dir:      dirs[0],
 		Function: frame.Function,
 		Line:     frame.Line,
 	}
+	if len(dirs) == 2 {
+		f.Version = dirs[1]
+	}
+	return f
 }
