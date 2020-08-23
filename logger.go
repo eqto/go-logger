@@ -181,7 +181,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 		if !newline {
 			buf.WriteString("\n")
 		}
-		frames := Stacktrace()
+		frames := stacktrace(5)
 		for _, frame := range frames {
 			buf.WriteString(`    ` + frame.String() + "\n")
 		}
@@ -207,10 +207,9 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 	}
 }
 
-//Stacktrace ...
-func Stacktrace() []Frame {
-	pc := make([]uintptr, 10)
-	n := runtime.Callers(5, pc)
+func stacktrace(skip int) []Frame {
+	pc := make([]uintptr, 10+skip)
+	n := runtime.Callers(skip, pc)
 	if n == 0 {
 		return nil
 	}
@@ -228,6 +227,11 @@ func Stacktrace() []Frame {
 		}
 	}
 	return frames
+}
+
+//Stacktrace ...
+func Stacktrace() []Frame {
+	return stacktrace(3)
 }
 
 //D ...
