@@ -230,8 +230,8 @@ func stacktrace(skip int) []Frame {
 }
 
 //Stacktrace ...
-func Stacktrace() []Frame {
-	return stacktrace(3)
+func Stacktrace(skip int) []Frame {
+	return stacktrace(3 + skip)
 }
 
 //D ...
