@@ -328,19 +328,18 @@ func newFormat(level int, format string) *Format {
 		time:  regexTime.FindString(format),
 		file:  regexFile.FindString(format),
 	}
-
 }
 
 //New ...
-func New(format string, file string) *Logger {
-	logger := &Logger{callDepth: 1, File: file}
-	logger.SetFormat(format)
-	return logger
+func New() *Logger {
+	return NewWithFormat(DefaultFormat)
 }
 
-//NewDefault ...
-func NewDefault() *Logger {
-	return New(DefaultFormat, ``)
+//NewWithFormat ...
+func NewWithFormat(format string) *Logger {
+	logger := &Logger{callDepth: 1}
+	logger.SetFormat(format)
+	return logger
 }
 
 //Default ...
