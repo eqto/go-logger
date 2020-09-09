@@ -30,17 +30,12 @@ type Logger struct {
 
 //Print ...
 func (l *Logger) Print(v ...interface{}) {
-	l.print(LevelDebug, false, ``, v...)
-}
-
-//Printf ...
-func (l *Logger) Printf(format string, v ...interface{}) {
-	l.print(LevelDebug, false, format, v...)
+	l.print(LevelDebug, false, v...)
 }
 
 //Println ...
 func (l *Logger) Println(v ...interface{}) {
-	l.print(LevelDebug, true, ``, v...)
+	l.print(LevelDebug, true, v...)
 }
 
 //Format ...
@@ -80,34 +75,34 @@ func (l *Logger) SetPrefix(prefix string) {
 //D ...
 func (l *Logger) D(v ...interface{}) {
 	if l.Level <= LevelDebug {
-		l.print(LevelDebug, true, ``, v...)
+		l.print(LevelDebug, true, v...)
 	}
 }
 
 //I ...
 func (l *Logger) I(v ...interface{}) {
 	if l.Level <= LevelInfo {
-		l.print(LevelInfo, true, ``, v...)
+		l.print(LevelInfo, true, v...)
 	}
 }
 
 //W ...
 func (l *Logger) W(v ...interface{}) {
 	if l.Level <= LevelWarn {
-		l.print(LevelWarn, true, ``, v...)
+		l.print(LevelWarn, true, v...)
 	}
 }
 
 //E ...
 func (l *Logger) E(v ...interface{}) {
 	if l.Level <= LevelError {
-		l.print(LevelError, true, ``, v...)
+		l.print(LevelError, true, v...)
 	}
 }
 
 // F equivalent to Print() followed by a call to os.Exit(1).
 func (l *Logger) F(v ...interface{}) {
-	l.print(LevelFatal, false, ``, v...)
+	l.print(LevelFatal, false, v...)
 	os.Exit(1)
 }
 
@@ -124,10 +119,10 @@ func (l *Logger) SetFile(file string) {
 }
 
 func (l *Logger) println(level int, format string, v ...interface{}) {
-	l.print(level, true, format, v...)
+	l.print(level, true, v...)
 }
 
-func (l *Logger) print(level int, newline bool, format string, v ...interface{}) {
+func (l *Logger) print(level int, newline bool, v ...interface{}) {
 	var f *Format
 	if format, ok := l.formats[level]; ok {
 		f = format
@@ -140,7 +135,7 @@ func (l *Logger) print(level int, newline bool, format string, v ...interface{})
 	if f.level != `` {
 		out = strings.Replace(
 			out, f.level,
-			levelColor[level]+strings.Replace(f.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
+			levelColor(level)+strings.Replace(f.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
 	}
 	if f.date != `` {
 		out = strings.Replace(
@@ -279,7 +274,7 @@ func Fatal(v ...interface{}) {
 // Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
 // Compatibility for built-in go logging library
 func Fatalf(format string, v ...interface{}) {
-	std.Printf(format, v...)
+	std.Print(fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
@@ -293,14 +288,14 @@ func Fatalln(v ...interface{}) {
 // Arguments are handled in the manner of fmt.Print.
 // Compatibility for built-in go logging library
 func Print(v ...interface{}) {
-	std.Print(fmt.Sprint(v...))
+	std.Print(v...)
 }
 
 // Printf calls Output to print to the standard logger.
 // Arguments are handled in the manner of fmt.Printf.
 // Compatibility for built-in go logging library
 func Printf(format string, v ...interface{}) {
-	std.Printf(fmt.Sprintf(format, v...))
+	std.Print(fmt.Sprintf(format, v...))
 }
 
 // Println calls Output to print to the standard logger.
