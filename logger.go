@@ -330,6 +330,11 @@ func newFormat(level int, format string) *Format {
 	}
 }
 
+//Default ...
+func Default() *Logger {
+	return std
+}
+
 //New ...
 func New() *Logger {
 	return NewWithFormat(DefaultFormat)
@@ -342,7 +347,9 @@ func NewWithFormat(format string) *Logger {
 	return logger
 }
 
-//Default ...
-func Default() *Logger {
-	return std
+//NewWithFile ...
+func NewWithFile(filename string) *Logger {
+	logger := NewWithFormat(DefaultFormat)
+	logger.SetFile(filename)
+	return logger
 }

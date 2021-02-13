@@ -13,7 +13,7 @@ var (
 		LevelFatal: `FATAL`,
 	}
 
-	std        = NewDefault()
+	std        = New()
 	regexLevel = regexp.MustCompile(`\S*%level%\S*`)
 	regexDate  = regexp.MustCompile(`%date%`)
 	regexTime  = regexp.MustCompile(`%time%`)
