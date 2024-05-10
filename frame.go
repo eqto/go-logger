@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-//Frame ...
 type Frame struct {
 	File     string
 	Dir      string

@@ -7,7 +7,8 @@ import (
 )
 
 type Session struct {
-	items []sessionItem
+	logger *Logger
+	items  []sessionItem
 }
 
 func (s *Session) log(msg ...string) {
@@ -16,7 +17,6 @@ func (s *Session) log(msg ...string) {
 
 func (s *Session) flush() {
 	sb := strings.Builder{}
-	sb.WriteByte('\n')
 	var start time.Time
 	var strTime string
 	for idx, item := range s.items {
@@ -28,7 +28,11 @@ func (s *Session) flush() {
 		}
 		sb.WriteString(fmt.Sprintf("\t%-10s > %s\n", strTime, item.msg))
 	}
-	std.Println(sb.String())
+	if s.logger != nil {
+		s.logger.writer().Write([]byte(sb.String()))
+	} else {
+		std.Println(sb.String())
+	}
 }
 
 type sessionItem struct {
