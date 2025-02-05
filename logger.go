@@ -22,9 +22,14 @@ type Logger struct {
 	f         *os.File
 	callDepth int
 
-	formats map[int]*Format
-	prefix  string
-	out     io.Writer
+	formats      map[int]*Format
+	prefix       string
+	out          io.Writer
+	disableColor bool
+}
+
+func (l *Logger) DisableColor(disable bool) {
+	l.disableColor = disable
 }
 
 func (l *Logger) Print(v ...interface{}) {
@@ -139,9 +144,13 @@ func (l *Logger) print(depth, level int, newline bool, v ...interface{}) {
 	now := time.Now()
 
 	if f.level != `` {
+		color := levelColor(level)
+		if l.disableColor {
+			color = ""
+		}
 		out = strings.Replace(
 			out, f.level,
-			levelColor(level)+strings.Replace(f.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
+			color+strings.Replace(f.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
 	}
 	if f.date != `` {
 		out = strings.Replace(
@@ -313,6 +322,10 @@ func SetPrefix(prefix string) {
 
 func SetFormat(format string) {
 	std.SetFormat(format)
+}
+
+func DisableColor(disable bool) {
+	std.DisableColor(disable)
 }
 
 func newFormat(level int, format string) *Format {
