@@ -133,6 +133,13 @@ func (l *Logger) writer() io.Writer {
 	return l.out
 }
 
+func (l *Logger) color(color string) string {
+	if l.disableColor {
+		return ``
+	}
+	return color
+}
+
 func (l *Logger) print(depth, level int, newline bool, v ...interface{}) {
 	var f *Format
 	if format, ok := l.formats[level]; ok {
@@ -144,23 +151,20 @@ func (l *Logger) print(depth, level int, newline bool, v ...interface{}) {
 	now := time.Now()
 
 	if f.level != `` {
-		color := levelColor(level)
-		if l.disableColor {
-			color = ""
-		}
+		s := strings.Replace(f.level, `%level%`, levelName[level], 1)
 		out = strings.Replace(
 			out, f.level,
-			color+strings.Replace(f.level, `%level%`, levelName[level], 1)+bgWhite+fgBlack, 1)
+			l.color(levelColor(level))+s+l.color(bgWhite+fgBlack), 1)
 	}
 	if f.date != `` {
 		out = strings.Replace(
 			out, f.date,
-			bgWhite+fgBlack+strings.Replace(f.date, `%date%`, now.Format(`2006-01-02`), 1), 1)
+			l.color(bgWhite+fgBlack)+strings.Replace(f.date, `%date%`, now.Format(`2006-01-02`), 1), 1)
 	}
 	if f.time != `` {
 		out = strings.Replace(
 			out, f.time,
-			bgWhite+fgBlack+strings.Replace(f.time, `%time%`, now.Format(`15:04:05`), 1), 1)
+			l.color(bgWhite+fgBlack)+strings.Replace(f.time, `%time%`, now.Format(`15:04:05`), 1), 1)
 	}
 	if f.file != `` {
 		_, file, line, _ := runtime.Caller(depth + 2)
@@ -174,7 +178,7 @@ func (l *Logger) print(depth, level int, newline bool, v ...interface{}) {
 		dir = dirs[1]
 		out = strings.Replace(
 			out, f.file,
-			bgWhite+fgCyan+strings.Replace(f.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, file, line), 1)+bgWhite+fgBlack, 1)
+			l.color(bgWhite+fgCyan)+strings.Replace(f.file, `%file%`, fmt.Sprintf(`%s/%s:%d`, dir, file, line), 1)+l.color(bgWhite+fgBlack), 1)
 	}
 	buf := strings.Builder{}
 	buf.WriteString(out)
